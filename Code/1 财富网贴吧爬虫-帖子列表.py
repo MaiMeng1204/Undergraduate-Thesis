@@ -167,8 +167,7 @@ os.chdir(r'E:\NJU\毕业论文\Data') # Set current working directory
 '''读取沪深300成分股票代码，仍然以CSMAR为准'''
 types={'股票代码':str}
 stk=pd.read_excel(r'../Data/000300cons.xls', converters={'成分券代码Constituent Code': str},encoding='GBK')
-index = np.where(stk['成分券代码Constituent Code'] == '002555')[0][0]
-stk = stk.iloc[index:, :]
+
 #测试代码
 #data=getUrl('300736')
 
