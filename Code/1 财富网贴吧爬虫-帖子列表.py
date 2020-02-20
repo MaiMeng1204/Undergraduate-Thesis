@@ -165,7 +165,6 @@ os.chdir(r'E:\NJU\毕业论文\Data') # Set current working directory
 #stk.columns=['股票代码','股票简称','行业代码','公司成立日期','上市日期','交易状态','市场类型']
 
 '''读取沪深300成分股票代码，仍然以CSMAR为准'''
-types={'股票代码':str}
 stk=pd.read_excel(r'../Data/000300cons.xls', converters={'成分券代码Constituent Code': str},encoding='GBK')
 
 #测试代码

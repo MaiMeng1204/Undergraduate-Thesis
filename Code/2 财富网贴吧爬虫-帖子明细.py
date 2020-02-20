@@ -20,6 +20,8 @@ import random
 import re
 import os
 import requests
+import logging
+import sys
 from lxml import etree
 import copy
 from ast import literal_eval
@@ -28,26 +30,28 @@ from ast import literal_eval
 #把错误日志+当前时间写入日志文件，并在屏幕输出
 def error_info(log):
     log=time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))+'\t'+log
-    with open('.\error_log_detail.txt','a') as f:
+    with open('./error_log_detail.txt','a') as f:
         f.write(log+'\n')
 #    print(log)
 
 #读取文件，并抓取每个帖子的内容
 def getUrl(file,website):
-    stk=pd.read_csv(r'.\post_list\\'+file, encoding='GBK',dtype=types)
+    stk=pd.read_csv(r'./post_list/'+file, encoding='utf-8-sig')
     #剔除 href为nan的行
     stk=stk.loc[~pd.isnull(stk['hrefs']),:]
     stk=stk.loc[~pd.isnull(stk['uids']),:]
     stk.reset_index(drop=True,inplace=True)
     '''测试'''
-#    stk=stk.iloc[:100,:]
+    stk = stk.iloc[:10000, :]
     
-    reply_uids=[]
-    reply_date=[]
-    post_uids=[]
-    post_date=[]
-    source_list=[]
-    post_num=[]
+    reply_uids = []
+    reply_date = []
+    reply_content = []
+    post_uids = []
+    post_date = []
+    post_content = []
+    source_list = []
+    post_num = []
     for ix,[href,uid] in enumerate(zip(stk['hrefs'],stk['uids'])):
         #将uid从字符串转为list
         try:
@@ -55,20 +59,22 @@ def getUrl(file,website):
         except:
             uid=[]
             error_info('读取帖子{0}的UID出错'.format(href))
-        re_uid, re_date, po_date, source, po_num,again = spiderDetail(href,website)
+        re_uid, re_date, re_content, po_date, po_content, source, po_num, again = spiderDetail(href,website)
         #如果有问题，就重新读取一次
         if again==True:
             time.sleep(1)
-            re_uid, re_date, po_date, source, po_num,again = spiderDetail(href,website)
+            re_uid, re_date, re_content, po_date, po_content, source, po_num, again = spiderDetail(href,website)
         reply_uids.append(re_uid)
         reply_date.append(re_date)
+        reply_content.append(re_content)
         post_uids.append(uid)
         post_date.append(po_date)
+        post_content.append(po_content)
         source_list.append(source)
         post_num.append(po_num)
         
-        if ix%5000==0:
-            print('文件{0}: 已完成 {1}/{2} 个帖子明细抓取，当前时间{3}'.format(
+        if ix%5==0:
+            logger.info('文件{0}: 已完成 {1}/{2} 个帖子明细抓取，当前时间{3}'.format(
                     file,ix+1,stk.shape[0],time.strftime("%H:%M:%S")))
     
     data_all=pd.DataFrame()
@@ -109,6 +115,9 @@ def spiderDetail(href,website):
         else:
             #读取发帖人的发帖时间
             post_date=seletor.xpath('//div[@class="zwfbtime"]/text()')
+            post_content = seletor.xpath('//div[@id="zw_body"]//*/text()')
+            post_content = ''.join(post_content).replace(u'\u3000', '')
+            post_content = post_content.strip()
             try:
                 post_date=post_date[0]
             except:
@@ -146,12 +155,13 @@ def spiderDetail(href,website):
             
             #读取回帖数量
             try:
-                re_num1=seletor.xpath('//div[@id="zwcontab"]//a/text()')[0]
-                re_num1=re_num1.replace('全部评论（','')
+                re_num1=seletor.xpath('//div[@id="zwcontab"]//span[@class="comment_num"]/text()')[0]
+                re_num1=re_num1.replace('（','')
                 re_num1=re_num1.replace('）','')
                 re_num1=int(re_num1)
             except:
                 re_num1=0
+                re_count = 30
             '''这一段弃置不用，因为部分网页的代码不规范，可能匹配不到
             try:
                 temp=seletor.xpath('//div[@id="zwlist"]/script[2]/text()')[0]
@@ -161,7 +171,7 @@ def spiderDetail(href,website):
                 error_info('读取帖子{0}回帖数量1出错'.format(href))
             '''
             #第二次读取回帖数量（有第二页的帖子才有这一信息）
-            re_num_temp=seletor.xpath('//span[@class="pagernums"]/@data-page')
+            re_num_temp=seletor.xpath('//span[@class="pagernums1"]/@data-page')
             try:
                 re_num_temp=re_num_temp[0]
                 re_num_temp=re_num_temp.split('|')
@@ -173,39 +183,44 @@ def spiderDetail(href,website):
             except:
                 re_num2=1  #设置为1，这样计算出的re_page_num至少为1
                 re_count=30
-            re_page_num=int(np.ceil(re_num2/re_count))
+            re_page_num=int(np.ceil(max(re_num1, re_num2)/re_count))
             
             #读取每一页回帖的内容
             re_date='' #回帖时间
-            re_uid=''  #回帖人id
-            for page in range(re_page_num):
-                if page>0:
-                    #生成下一页url，并访问这个url
-                    url=url.split('.html')[0]
-                    #剔除之前的下一页代码
-                    url=url.split('_')[0]
-                    url=url+'_'+str(page+1)+'.html'
-                    htmlText=requests.get(url, headers=headers).text
-                    seletor=etree.HTML(htmlText)
+            re_uid=''  #回帖id
+            re_content=''   #回帖内容
+            for page in range(1, re_page_num+1):
+                #生成url，并访问这个url
+                url=url.split('.html')[0]
+                #剔除之前的下一页代码
+                url=url.split('_')[0]
+                url=url+'_'+str(page)+'.html'
+                htmlText=requests.get(url, headers=headers).text
+                seletor=etree.HTML(htmlText)
                 
                 #回复时间
                 re_date_list=seletor.xpath('//div[@class="zwlitime"]/text()')
-                re_uid_list=seletor.xpath('//div[@class="zwli clearfix"]/@data-huifuuid')
-                
+                re_uid_list=seletor.xpath('//div[@class="zwli clearfix"]/@data-huifuid')
+                re_content_list = seletor.xpath('//div[@class="short_text"]/text()')
+                re_content_list = [x.strip() for x in re_content_list if x.strip != '']
+
                 #剔除无关字符，并将list转换为一个字符串
-                for i in range(len(re_date_list)):
+                for i in range(min(len(re_date_list), len(re_uid_list), len(re_content_list))):
                     date_temp=re_date_list[i]
                     date_temp=date_temp.replace('发表于 ','')
                     date_temp=date_temp.replace('  ',' ')
                     #将回帖时间和回帖人id分别合并到字符串中
                     re_date=re_date+'|'+date_temp
                     re_uid=re_uid+'|'+re_uid_list[i]
+                    re_content = re_content + '|' + re_content_list[i].strip()
             
-            #剔除re_uid、re_date的第一个|
+            #剔除re_uid、re_date、re_content的第一个|
             if re_date.startswith('|'):
                 re_date=re_date[1:]
             if re_uid.startswith('|'):
                 re_uid=re_uid[1:]
+            if re_content.startswith('|'):
+                re_content=re_content[1:]
     except:
         error_info('读取帖子{0}详细内容出错'.format(href))
         again=True
@@ -213,42 +228,45 @@ def spiderDetail(href,website):
         post_date=''
         source='Unknown'
         re_num1=0
-    return re_uid, re_date, post_date, source, re_num1,again
+    return re_uid, re_date, re_content, post_date, post_content, source, re_num1, again
 
 #%%
-os.chdir(r'D:\爬虫-东方财富网') # Set current working directory
-
+os.chdir(r'E:\NJU\毕业论文\Data') # Set current working directory
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+fh = logging.FileHandler('爬取帖子明细.log')
+fh.setLevel(logging.INFO)
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.INFO)
+logger.addHandler(fh)
+logger.addHandler(handler)
 #读取每个股票的帖子列表
 #读取csv文件的地址不能有中文，但写入时可以有中文
-filepath = r'.\post_list'
+filepath = r'./post_list'
 #files = os.listdir(filepath)
 #files.sort()
 
 website='http://guba.eastmoney.com'
-types={'股票代码':str,'股票简称':str,'CSRC行业分类':str,'GICS行业分类':str,
-       '企业板块标示':int}
 
-'''读取缺失的股票代码，仍然以CSMAR为准'''
-types={'股票代码':str}
-stk=pd.read_csv(r'.\stock_code.csv',encoding='GBK',dtype=types)
+stk=pd.read_excel(r'../Data/000300cons.xls', converters={'成分券代码Constituent Code': str},encoding='GBK')
 
-#确定缺失股票的文件名列表
-stk['files']=stk['股票代码'].apply(lambda x:'Guba-'+x+'.csv')
+#确定股票的文件名列表
+stk['files']=stk['成分券代码Constituent Code'].apply(lambda x: 'Guba-' + x + '.csv')
 files=stk['files'].values.tolist()
 
 #抓取数据()
-start=0
-end=1
+start = 0
+end = 300
 #实际抓取的股票列表
-files_scrape=files[start:end]
-print('start:{0}, end:{1}'.format(start,end))
+files_scrape=files[start: end]
+logger.info('start:{0}, end:{1}'.format(start,end))
 for i in range(len(files_scrape)):
     file=files_scrape[i]
     stk=file.split('-')[1].split('.')[0]
     data=pd.DataFrame()
     data,post_num = getUrl(file,website)
     
-    print('完成股票{0}(序号:{1}/{2})的{3}个帖子，当前时间{4}'.format(
+    logger.info('完成股票{0}(序号:{1}/{2})的{3}个帖子，当前时间{4}'.format(
             stk,i+1,len(files_scrape),post_num,time.strftime("%H:%M:%S")))
-    data.to_csv('D:\爬虫-东方财富网\post_detail\Guba-'+stk+'-detail.csv',index=False)
-print('{0}到{1}全部完成'.format(start,end))
+    data.to_csv('./post_detail/Guba-'+stk+'-detail.csv', encoding='utf_8_sig', index=False)
+logger.info('{0}到{1}全部完成'.format(start,end))
