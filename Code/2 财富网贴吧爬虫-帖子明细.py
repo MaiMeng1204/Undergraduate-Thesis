@@ -117,7 +117,7 @@ def spiderDetail(href,website):
         else:
             #读取发帖人的发帖时间
             post_date=seletor.xpath('//div[@class="zwfbtime"]/text()')
-            post_content = seletor.xpath('//div[@id="zw_body"]//*/text()')
+            post_content = seletor.xpath('//div[contains(@id, "zw") and contains(@id, "body")]//*/text()')
             post_content = ''.join(post_content).replace(u'\u3000', '')
             post_content = post_content.strip()
             try:
@@ -250,19 +250,15 @@ filepath = r'./post_list'
 
 website='http://guba.eastmoney.com'
 
-stk=pd.read_excel(r'../Data/000300cons.xls', converters={'成分券代码Constituent Code': str},encoding='GBK')
-
+stk=pd.read_excel(r'../Data/000016cons.xls', converters={'成分券代码Constituent Code': str},encoding='GBK')
+stk = stk.iloc[-25:, :]
 #确定股票的文件名列表
 stk['files']=stk['成分券代码Constituent Code'].apply(lambda x: 'Guba-' + x + '.csv')
 files=stk['files'].values.tolist()
 
 #抓取数据()
-start = 0
-end = 20
-np.random.seed(0)
-select = np.random.randint(low=0, high=300, size=20).tolist()
-#实际抓取的股票列表
-files_scrape=[files[i] for i in select]
+
+files_scrape=files
 for i in range(len(files_scrape)):
     file=files_scrape[i]
     stk=file.split('-')[1].split('.')[0]
