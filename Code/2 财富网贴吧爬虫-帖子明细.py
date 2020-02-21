@@ -42,7 +42,7 @@ def getUrl(file,website):
     stk=stk.loc[~pd.isnull(stk['uids']),:]
     stk.reset_index(drop=True,inplace=True)
     '''测试'''
-    stk = stk.iloc[:10000, :]
+    # stk = stk.iloc[:5, :]
     
     reply_uids = []
     reply_date = []
@@ -81,9 +81,11 @@ def getUrl(file,website):
     data_all['hrefs']=stk['hrefs']
     data_all['post_uids']=post_uids
     data_all['post_date']=post_date
+    data_all['post_content'] = post_content
     data_all['source']=source_list
     data_all['reply_uids']=reply_uids
     data_all['reply_date']=reply_date
+    data_all['reply_content'] = reply_content
     data_all['post_num']=post_num
     
     return data_all, stk.shape[0]
@@ -256,10 +258,11 @@ files=stk['files'].values.tolist()
 
 #抓取数据()
 start = 0
-end = 300
+end = 20
+np.random.seed(0)
+select = np.random.randint(low=0, high=300, size=20).tolist()
 #实际抓取的股票列表
-files_scrape=files[start: end]
-logger.info('start:{0}, end:{1}'.format(start,end))
+files_scrape=[files[i] for i in select]
 for i in range(len(files_scrape)):
     file=files_scrape[i]
     stk=file.split('-')[1].split('.')[0]
