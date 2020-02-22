@@ -227,6 +227,7 @@ def spiderDetail(href,website):
         error_info('读取帖子{0}详细内容出错'.format(href))
         again=True
         re_uid, re_date='',''
+        re_content = ''
         post_date=''
         source='Unknown'
         re_num1=0
@@ -268,4 +269,3 @@ for i in range(len(files_scrape)):
     logger.info('完成股票{0}(序号:{1}/{2})的{3}个帖子，当前时间{4}'.format(
             stk,i+1,len(files_scrape),post_num,time.strftime("%H:%M:%S")))
     data.to_csv('./post_detail/Guba-'+stk+'-detail.csv', encoding='utf_8_sig', index=False)
-logger.info('{0}到{1}全部完成'.format(start,end))
