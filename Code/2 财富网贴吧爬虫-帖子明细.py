@@ -229,6 +229,7 @@ def spiderDetail(href,website):
         re_uid, re_date='',''
         re_content = ''
         post_date=''
+        post_content = ''
         source='Unknown'
         re_num1=0
     return re_uid, re_date, re_content, post_date, post_content, source, re_num1, again
