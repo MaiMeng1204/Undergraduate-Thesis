@@ -59,11 +59,14 @@ def getUrl(file,website):
         except:
             uid=[]
             error_info('读取帖子{0}的UID出错'.format(href))
+        time.sleep(5)
         re_uid, re_date, re_content, po_date, po_content, source, po_num, again = spiderDetail(href,website)
         #如果有问题，就重新读取一次
         if again==True:
-            time.sleep(1)
+            time.sleep(5)
             re_uid, re_date, re_content, po_date, po_content, source, po_num, again = spiderDetail(href,website)
+        print('帖子内容：', po_content)
+        print('回帖内容：', re_content)
         reply_uids.append(re_uid)
         reply_date.append(re_date)
         reply_content.append(re_content)
@@ -97,13 +100,25 @@ def spiderDetail(href,website):
         return None
     try:
         url=website+href
+        '''proxy = random.choice(proxy_ip)
+        proxies = {
+            'http': proxy,
+            'https': proxy
+        }
         
-        user_agent="Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0"
+        print('proxy:', proxy)'''
+        # user_agent="Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0"
+        user_agent = random.choice(user_agent_list)
         Host="guba.eastmoney.com"
         headers={
             "User-Agent":user_agent,
-            "Host":Host
+            "Host":Host,
+            # 'Connection': 'keep-alive',
+            'Referrer': 'http://guba.eastmoney.com/'
         }
+        print('user_agent:', user_agent)
+        homepage = requests.get('http://guba.eastmoney.com/', headers=headers)
+        time.sleep(random.random())
         htmlText=requests.get(url, headers=headers).text
         seletor=etree.HTML(htmlText)
         
@@ -235,6 +250,37 @@ def spiderDetail(href,website):
     return re_uid, re_date, re_content, post_date, post_content, source, re_num1, again
 
 #%%
+proxy_ip = [
+    'http://124.75.27.101:80',
+    'http://47.95.202.28:3128',
+    'http://220.242.160.147:80',
+    'http://117.83.159.219:8118',
+    'http://221.122.91.32:10286'
+]
+user_agent_list = [
+    "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",
+    "Mozilla/5.0 (X11; CrOS i686 2268.111.0) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.57 Safari/536.11",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1092.0 Safari/536.6",
+    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1090.0 Safari/536.6",
+    "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/19.77.34.5 Safari/537.1",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.9 Safari/536.5",
+    "Mozilla/5.0 (Windows NT 6.0) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.36 Safari/536.5",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_0) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+    "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
+    "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'
+]
 os.chdir(r'E:\NJU\毕业论文\Data') # Set current working directory
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -253,7 +299,7 @@ filepath = r'./post_list'
 website='http://guba.eastmoney.com'
 
 stk=pd.read_excel(r'../Data/000016cons.xls', converters={'成分券代码Constituent Code': str},encoding='GBK')
-stk = stk.iloc[-25:, :]
+stk = stk.iloc[25:, :]
 #确定股票的文件名列表
 stk['files']=stk['成分券代码Constituent Code'].apply(lambda x: 'Guba-' + x + '.csv')
 files=stk['files'].values.tolist()
