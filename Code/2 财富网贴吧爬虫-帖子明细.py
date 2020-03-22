@@ -59,7 +59,6 @@ def getUrl(file,website):
         except:
             uid=[]
             error_info('读取帖子{0}的UID出错'.format(href))
-        time.sleep(5)
         re_uid, re_date, re_content, po_date, po_content, source, po_num, again = spiderDetail(href,website)
         #如果有问题，就重新读取一次
         if again==True:
