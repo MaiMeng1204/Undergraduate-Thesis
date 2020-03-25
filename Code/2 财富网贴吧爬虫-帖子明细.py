@@ -35,7 +35,7 @@ def error_info(log):
 #    print(log)
 
 #读取文件，并抓取每个帖子的内容
-def getUrl(file,website):
+def getUrl(file, stock, website):
     stk=pd.read_csv(r'./post_list/'+file, encoding='utf-8-sig')
     #剔除 href为nan的行
     stk=stk.loc[~pd.isnull(stk['hrefs']),:]
@@ -52,45 +52,45 @@ def getUrl(file,website):
     post_content = []
     source_list = []
     post_num = []
+    if os.path.exists('./post_detail/Guba-' + stock + '-detail.csv'):
+        data_all = pd.read_csv('./post_detail/Guba-' + stock + '-detail.csv')
+    else:
+        data_all = pd.DataFrame()
     for ix,[href,uid] in enumerate(zip(stk['hrefs'],stk['uids'])):
-        #将uid从字符串转为list
-        try:
-            uid=literal_eval(uid)
-        except:
-            uid=[]
-            error_info('读取帖子{0}的UID出错'.format(href))
-        re_uid, re_date, re_content, po_date, po_content, source, po_num, again = spiderDetail(href,website)
+        if ix < 13459:
+            continue
+        re_uid, re_date, re_content, po_date, po_content, source, re_num, again = spiderDetail(href, website)
+        while po_content.startswith((' 经中国', '经中国', ' 期货', '期货')):
+            time.sleep(720)
+            re_uid, re_date, re_content, po_date, po_content, source, re_num, again = spiderDetail(href, website)
         #如果有问题，就重新读取一次
         if again==True:
             time.sleep(5)
-            re_uid, re_date, re_content, po_date, po_content, source, po_num, again = spiderDetail(href,website)
+            re_uid, re_date, re_content, po_date, po_content, source, re_num, again = spiderDetail(href, website)
         print('帖子内容：', po_content)
         print('回帖内容：', re_content)
-        reply_uids.append(re_uid)
+        '''reply_uids.append(re_uid)
         reply_date.append(re_date)
         reply_content.append(re_content)
         post_uids.append(uid)
         post_date.append(po_date)
         post_content.append(po_content)
         source_list.append(source)
-        post_num.append(po_num)
+        post_num.append(po_num)'''
         
         if ix%5==0:
             logger.info('文件{0}: 已完成 {1}/{2} 个帖子明细抓取，当前时间{3}'.format(
                     file,ix+1,stk.shape[0],time.strftime("%H:%M:%S")))
-    
-    data_all=pd.DataFrame()
-    data_all['hrefs']=stk['hrefs']
-    data_all['post_uids']=post_uids
-    data_all['post_date']=post_date
-    data_all['post_content'] = post_content
-    data_all['source']=source_list
-    data_all['reply_uids']=reply_uids
-    data_all['reply_date']=reply_date
-    data_all['reply_content'] = reply_content
-    data_all['post_num']=post_num
-    
-    return data_all, stk.shape[0]
+        data_all.loc[ix, 'hrefs'] = stk.loc[ix, 'hrefs']
+        data_all.loc[ix, 'post_uids'] = uid
+        data_all.loc[ix, 'post_date'] = po_date
+        data_all.loc[ix, 'post_content'] = po_content
+        data_all.loc[ix, 'source'] = source
+        data_all.loc[ix, 'reply_uids'] = re_uid
+        data_all.loc[ix, 'reply_date'] = re_date
+        data_all.loc[ix, 'reply_content'] = re_content
+        data_all.loc[ix, 'post_num'] = re_num
+        data_all.to_csv('./post_detail/Guba-' + stock + '-detail.csv', encoding='utf_8_sig', index=False)
     
 #只需要提取每个帖子的发帖人、时间
 def spiderDetail(href,website):
@@ -280,7 +280,7 @@ user_agent_list = [
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36',
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'
 ]
-os.chdir(r'E:\NJU\毕业论文\Data') # Set current working directory
+os.chdir(r'C:\Users\123\Desktop\MengMai\Undergraduate-Thesis\Data') # Set current working directory
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 fh = logging.FileHandler('爬取帖子明细.log')
@@ -306,12 +306,13 @@ files=stk['files'].values.tolist()
 #抓取数据()
 
 files_scrape=files
-for i in range(len(files_scrape)):
+for i in range(1, len(files_scrape)):
     file=files_scrape[i]
-    stk=file.split('-')[1].split('.')[0]
+    stock=file.split('-')[1].split('.')[0]
     data=pd.DataFrame()
-    data,post_num = getUrl(file,website)
+    data,post_num = getUrl(file, stock, website)
     
     logger.info('完成股票{0}(序号:{1}/{2})的{3}个帖子，当前时间{4}'.format(
             stk,i+1,len(files_scrape),post_num,time.strftime("%H:%M:%S")))
-    data.to_csv('./post_detail/Guba-'+stk+'-detail.csv', encoding='utf_8_sig', index=False)
+    
+    time.sleep(600)
