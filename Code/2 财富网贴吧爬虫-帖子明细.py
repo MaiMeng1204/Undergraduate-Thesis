@@ -57,13 +57,19 @@ def getUrl(file, stock, website):
     else:
         data_all = pd.DataFrame()
     for ix,[href,uid] in enumerate(zip(stk['hrefs'],stk['uids'])):
-        #if ix < 113266:
+        # if ix < 30000:
         #    continue
         re_uid, re_date, re_content, po_date, po_content, source, re_num, again = spiderDetail(href, website)
-        while po_content.startswith((' 经中国', '经中国', ' 期货投资', '期货投资')):
+        
+        if po_content.startswith((
+            ' 经中国', '经中国', ' 期货投资', '期货投资', '中国疾控中心流行病', '了解一家上市公司',
+            '4月2日', '根据党中央', '4月9日', '全球疫情蔓延', 'A股又有动作', '纵观整个A股市场', '都说股市是',
+            '当前，在错综复杂')):
             data_all.to_csv('./post_detail/Guba-' + stock + '-detail.csv', encoding='utf_8_sig', index=False)
-            time.sleep(720)
-            re_uid, re_date, re_content, po_date, po_content, source, re_num, again = spiderDetail(href, website)
+            time.sleep(3000)
+            continue
+        if len(po_content) > 500:
+            po_content = ''
         #如果有问题，就重新读取一次
         if again==True:
             time.sleep(5)
@@ -82,8 +88,6 @@ def getUrl(file, stock, website):
         if ix%5==0:
             logger.info('文件{0}: 已完成 {1}/{2} 个帖子明细抓取，当前时间{3}'.format(
                     file,ix+1,stk.shape[0],time.strftime("%H:%M:%S")))
-        if ix % 10000 == 0:
-            data_all.to_csv('./post_detail/Guba-' + stock + '-detail.csv', encoding='utf_8_sig', index=False)
         data_all.loc[ix, 'hrefs'] = stk.loc[ix, 'hrefs']
         data_all.loc[ix, 'post_uids'] = uid
         data_all.loc[ix, 'post_date'] = po_date
@@ -93,6 +97,8 @@ def getUrl(file, stock, website):
         data_all.loc[ix, 'reply_date'] = re_date
         data_all.loc[ix, 'reply_content'] = re_content
         data_all.loc[ix, 'post_num'] = re_num
+        if ix % 1000 == 0:
+            data_all.to_csv('./post_detail/Guba-' + stock + '-detail.csv', encoding='utf_8_sig', index=False)
     data_all.to_csv('./post_detail/Guba-' + stock + '-detail.csv', encoding='utf_8_sig', index=False)
     
 #只需要提取每个帖子的发帖人、时间
@@ -309,10 +315,9 @@ files=stk['files'].values.tolist()
 #抓取数据()
 
 files_scrape=files
-for i in range(2, len(files_scrape)):
+for i in range(len(files_scrape)):
     file=files_scrape[i]
     stock=file.split('-')[1].split('.')[0]
     getUrl(file, stock, website)
-    logger.info('完成股票{0}(序号:{1}/{2})，当前时间{4}'.format(
-            stk,i+1,len(files_scrape),time.strftime("%H:%M:%S")))
+    logger.info('完成股票{0}(序号:{1}/{2})，当前时间{3}'.format(stock, i+1, len(files_scrape), time.strftime("%H:%M:%S")))
     time.sleep(600)
