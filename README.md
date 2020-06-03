@@ -7,6 +7,14 @@
 
 研究结果表明：（1）使用经主题分类的情绪指标能提取出海量股票文本中的价值信息，与股票超额收益率正相关；（2）不同主题情绪对股票超额收益的影响程度和持续性不同；（3）主题情绪对股票超额收益率的影响存在非对称效应；（4）主题情绪能有效解释公司超预期盈余。本文研究结论对股市投资者情绪研究具有一定意义和价值，为该领域研究提供了一种独特的切入视角。
 
+## Abstract
+
+Investor sentiment has always been a hotspot in financial research. The fluctuation of stock market is greatly influenced by investor sentiment in the short term. Retail investors account for a large proportion in Chinese A share market, so the research of investor sentiment becomes meaningful.
+
+This article studies the impact of posts in financial forum on stock price, and furthermore, studies the asymmetric effect of the impact of investor sentiment on stock price and whether investor sentiment can explain unexpected surplus, which is based on behavior finance theory and nature language process technique. Regarding the fact that the posts in financial forum always contain complaint of investors and then, produce noise in text analysis, we utilize LDA topic model to classify the posts in order to extract implicit information which is relevant to stock price. Regarding the problem that the length of posts in financial forum is short, resulting in inaccuracy in LDA topic model training, we use a aggregation pattern named post-comment to concatenate the short text. Taking a sentence as a unit, we make use of Baidu AI emotional tendency analysis technology and snownlp(a Python sentiment analysis package) to analyze invertor sentiment in posts of different topics.
+
+The results prove that: (1) The sentiment indicators which are produced by topic classification can extract value information from massive stock text data, and there is a positive correlation between stock excess return and investor sentiment. (2) Sentiment of different topics has different impact extent and persistence on stock excess return. (3) There is asymmetric effect of the impact of investor sentiment on stock price. (4) Investor sentiment that is classified by topic can effectively explain unexpected surplus. The conclusion of this article is of certain significance to the current research of investor sentiment and provide a new perspective in this research field.
+
 ## 代码运行步骤
 
 1. `1 财富网贴吧爬虫-帖子列表.py`，得到帖子列表
