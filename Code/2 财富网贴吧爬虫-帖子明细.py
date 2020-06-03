@@ -14,22 +14,18 @@ post_num：回帖数量
 """
 import pandas as pd
 import numpy as np
-import timeit
 import time
 import random
-import re
 import os
 import requests
 import logging
 import sys
 from lxml import etree
-import copy
-from ast import literal_eval
 
-#%%
-#把错误日志+当前时间写入日志文件，并在屏幕输出
+
+# 把错误日志+当前时间写入日志文件，并在屏幕输出
 def error_info(log):
-    log=time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))+'\t'+log
+    log = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))+'\t'+log
     with open('./error_log_detail.txt','a') as f:
         f.write(log+'\n')
 #    print(log)
