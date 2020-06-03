@@ -8,8 +8,9 @@ import jieba
 import os
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
+from sklearn.model_selection import GridSearchCV
 
-data_path = r'Data\post_detail'
+data_path = 'post_detail'
 file_list = os.listdir(data_path)
 all_post = pd.DataFrame()
 file_shape = [0]
@@ -19,36 +20,59 @@ for file in file_list:
     post_detail.sort_values('post_date', ascending=False, inplace=True)
     post_detail['post_date'] = post_detail['post_date'].apply(lambda x: x.year * 10000 + x.month * 100 + x.day)
     post_detail.reset_index(drop=True, inplace=True)
-    all_post = pd.concat([all_post, post_detail])
     file_shape.append(post_detail.shape[0])
-print(file_shape)
+    all_post = pd.concat([all_post, post_detail])
+
 corpus = []
-output_dir = r'Data\LDA_result2'
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir, exist_ok=True)
 for index, row in all_post.iterrows():
     all_list = row['post_content'] + row['reply_content'].replace('|', '。')
     cut = jieba.cut(all_list)
     result = ' '.join(cut)
     corpus.append(result)
 
+
 #从文件导入停用词表
-stpwrdpath = r"Data\stop_words\stop_words.txt"
-stpwrd_dic = open(stpwrdpath, 'r')
-stpwrd_content = stpwrd_dic.read()
+with open(r'stopwords-master\all_stopwords.txt', 'r', encoding='gbk') as f:
+    stopwords = f.read()
+    stpwrdlst = stopwords.splitlines()
+    f.close()
+stpwrdlst = stopwords.splitlines()
 
-#将停用词表转换为list  
-stpwrdlst = stpwrd_content.splitlines()
-stpwrd_dic.close()
 
+# 确定最优topic数
+search_params = {'n_components': list(range(1, 21))}
 cntVector = CountVectorizer(stop_words=stpwrdlst)
 cntTf = cntVector.fit_transform(corpus)
-lda = LatentDirichletAllocation(n_components=3, max_iter=1000)
+lda = LatentDirichletAllocation(max_iter=10)
+gridsearch = GridSearchCV(lda, param_grid=search_params, n_jobs=-1, verbose=0)
+gridsearch.fit(cntTf)
+print("Best Model's Params: ", gridsearch.best_params_)
+print("Best Log Likelihood Score: ", gridsearch.best_score_)
+
+
+# %%
+result = pd.DataFrame(gridsearch.cv_results_)
+
+
+# %%
+gridsearch.best_estimator_.perplexity(cntTf)
+
+
+# %%
+result.to_csv('LDA主题数选取结果.csv')
+
+
+# %%
+# 训练LDA模型
+topic = 7
+lda = LatentDirichletAllocation(n_components=topic, max_iter=10)
 docres = lda.fit_transform(cntTf)
 
+
+# %%
 # 保存结果
 file_shape = np.cumsum(file_shape)
-print(file_shape)
+output_dir = r'LDA_result_topic{}'.format(topic)
 for index, file in enumerate(file_list):
     with open(os.path.join(output_dir, '{}_doc_topic_result.txt'.format(file.split('-')[1])), 'w') as f:
         docres_temp = docres[file_shape[index]: file_shape[index+1]]
@@ -63,3 +87,24 @@ with open(os.path.join(output_dir, 'topic_word_result.txt'), 'w') as f:
         f.write(','.join([tf_feature_names[i] for i in topic.argsort()[:-20:-1]]))
         f.write('\n')
     f.close()
+
+
+# %%
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+wc = WordCloud(
+    background_color = "white", #设置背景颜色
+    #mask = "图片",  #设置背景图片
+    max_words = 200, #设置最大显示的字数
+    stopwords = stpwrdlst, #设置停用词
+    font_path = r"E:\Font\SourceHanSerifSC_EL-M\SourceHanSerifSC-Regular.otf",
+    #设置中文字体，使得词云可以显示（词云默认字体是“DroidSansMono.ttf字体库”，不支持中文）
+    max_font_size = 50,  #设置字体最大值
+    random_state = 30, #设置有多少种随机生成状态，即有多少种配色方案
+)
+myword = wc.generate(corpus)#生成词云
+
+plt.imshow(myword)
+plt.axis("off")
+plt.show()
+
